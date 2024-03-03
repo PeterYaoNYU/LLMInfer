@@ -79,3 +79,18 @@ def initialize_torch_distributed():
             logger.warning("torch.distributed is already initialized.")
 
         return torch.distributed.group.WORLD, RANK, WORLD_SIZE
+
+# notes from peter:
+# - this is a wrapper around torch.distributed.init_process_group
+# - it initializes the torch distributed process group
+# - it sets the device id
+# - it sets the memory fraction
+# - it sets the backend
+# - it sets the options
+# - it sets the timeout
+# - the process has been spawned somewhere else
+    # the rank is set by an external script
+    # the world size is set by an external script
+    # this is for the case of multiple gpus on the same machine
+    
+

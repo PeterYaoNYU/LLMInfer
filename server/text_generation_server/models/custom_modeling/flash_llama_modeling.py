@@ -37,6 +37,8 @@ from text_generation_server.utils.layers import (
     FastRMSNorm,
 )
 
+import flashinfer
+
 
 class LlamaConfig(PretrainedConfig):
     def __init__(
@@ -227,17 +229,27 @@ class FlashLlamaAttention(torch.nn.Module):
             )
         # Decode
         else:
-            paged_attention.attention(
-                attn_output,
-                query,
-                kv_cache[0],
-                kv_cache[1],
-                self.kv_head_mapping,
-                self.softmax_scale,
-                block_tables,
-                input_lengths,
-                max_s,
+            k_padded, v_padded = kv[:, 0, :, :], kv[:, 1, :, :]
+            attn_output = flashinfer.decode.batch_decode_with_padded_kv_cache(
+                q=query,
+                k_padded=k_padded,
+                v_padded=v_padded,
+                kv_layout='NHD',  # Assuming NHD layout is what your model uses
+                rotary_mode='LLAMA',  # Use LLAMA style rotary embeddings if applicable
+                sm_scale=self.softmax_scale,  # Use the class's softmax scale
+                # rope_scale and rope_theta are optional and depend on your configuration
             )
+            # paged_attention.attention(
+            #     attn_output,
+            #     query,
+            #     kv_cache[0],
+            #     kv_cache[1],
+            #     self.kv_head_mapping,
+            #     self.softmax_scale,
+            #     block_tables,
+            #     input_lengths,
+            #     max_s,
+            # )
 
         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
 
